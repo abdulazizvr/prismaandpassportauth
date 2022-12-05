@@ -1,4 +1,4 @@
-import { Injectable,BadRequestException } from '@nestjs/common';
+import {Injectable, BadRequestException, ForbiddenException, HttpException} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { AuthDto } from './dto';
@@ -21,11 +21,11 @@ export class AuthService {
         if(candidate) {
             throw new BadRequestException('Bunday email mavjud')
         }
-        const HashedPassword = await bcrypt.hash(authDto.password,7)
+        const hashedPassword = await bcrypt.hash(authDto.password,7)
         const newUser = await this.prismaService.user.create({
             data:{
                 email:authDto.email,
-                HashedPassword
+                hashedPassword
             }
         })
         const tokens = await this.getTokens(newUser.id,newUser.email)
@@ -64,5 +64,44 @@ export class AuthService {
                 hashedRefreshToken:hashedRefreshToken
             }
         })
+    }
+
+    async signin(authDto:AuthDto):Promise<Tokens> {
+        const {email,password} = authDto
+        const user = await this.prismaService.user.findUnique({
+            where:{
+                email:email
+            }
+        })
+        if(!user) throw new ForbiddenException('Acces denied')
+        const passwordmatches = await bcrypt.compare(
+            password,
+            user.hashedPassword
+        )
+        if(!passwordmatches) throw new ForbiddenException('Acces denied')
+        const tokens = await this.getTokens(user.id,user.email)
+        await this.updateRefreshTokenHash(user.id,tokens.refresh_token)
+
+        return tokens
+    }
+
+    async logout(userId:number):Promise<Boolean> {
+        const user = await this.prismaService.user.updateMany({
+            where:{
+                id:userId,
+                hashedRefreshToken: {
+                    not:null
+                }
+            },
+            data:{
+                hashedRefreshToken:null
+            }
+        })
+        console.log(user)
+        if(!user) throw new ForbiddenException('Acces denied')
+        if(!user) {
+            return false
+        }
+        return true
     }
 }

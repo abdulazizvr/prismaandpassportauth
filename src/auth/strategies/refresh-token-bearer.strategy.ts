@@ -1,11 +1,13 @@
 import {ForbiddenException, Injectable} from "@nestjs/common";
-import {PassportStrategy} from "@nestjs/passport";
+import { PassportStrategy } from "@nestjs/passport";
 import {Request} from "express";
 import {ExtractJwt,Strategy} from "passport-jwt";
 import {JwtPayload, JwtPayloadWithRefreshToken} from "../types";
 
 @Injectable()
-export class RefreshTokenBearerStrategy extends PassportStrategy (Strategy,'refresh-jwt'){
+export class RefreshTokenStrategy extends PassportStrategy 
+(Strategy,'refresh-jwt')
+{
     constructor() {
         super({
             jwtFromRequest:ExtractJwt.fromAuthHeaderAsBearerToken(),

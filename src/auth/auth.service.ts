@@ -8,6 +8,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthDto } from './dto/auth.dto';
 import * as bcrypt from 'bcryptjs';
 import { JwtPayload, Tokens } from './types';
+import { Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -16,13 +17,12 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async signup(authDto: AuthDto): Promise<Tokens> {
+  async signup(authDto: AuthDto,res:Response): Promise<Tokens> {
     const candidate = await this.prismaService.user.findUnique({
       where: {
         email: authDto.email,
       },
     });
-
     if (candidate) {
       throw new BadRequestException('Bunday email mavjud');
     }
@@ -36,6 +36,10 @@ export class AuthService {
     });
     const tokens = await this.getTokens(newUser.id, newUser.email);
     await this.updateRefreshTokenHash(newUser.id, tokens.refresh_token);
+    res.cookie('refresh_token',tokens.refresh_token,{
+      maxAge:7 * 24 * 60 * 60 * 1000,
+      httpOnly:true
+    })
     return tokens;
   }
   async updateRefreshTokenHash(
@@ -53,7 +57,7 @@ export class AuthService {
     });
   }
 
-  async signin(authDto: AuthDto): Promise<Tokens> {
+  async signin(authDto: AuthDto,res:Response): Promise<Tokens> {
     const { email, password } = authDto;
     const user = await this.prismaService.user.findUnique({
       where: {
@@ -70,9 +74,13 @@ export class AuthService {
 
     const tokens = await this.getTokens(user.id, user.email);
     await this.updateRefreshTokenHash(user.id, tokens.refresh_token);
+    res.cookie('refresh_token',tokens.refresh_token,{
+      maxAge:7 * 24 * 60 * 60 * 1000,
+      httpOnly:true
+    })
     return tokens;
   }
-  async refreshTokens(userId: number, refreshToken: string): Promise<Tokens> {
+  async refreshTokens(userId: number, refreshToken: string,res:Response): Promise<Tokens> {
     const user = await this.prismaService.user.findUnique({
       where: {
         id: userId,
@@ -91,10 +99,14 @@ export class AuthService {
 
     const tokens = await this.getTokens(user.id, user.email);
     await this.updateRefreshTokenHash(user.id, tokens.refresh_token);
+    res.cookie('refresh_token',tokens.refresh_token,{
+      maxAge:7 * 24 * 60 * 60 * 1000,
+      httpOnly:true
+    })
     return tokens;
   }
 
-  async logout(userId: number) {
+  async logout(userId: number,res:Response) {
     const user = await this.prismaService.user.updateMany({
       where: {
         id: Number(userId),
@@ -108,6 +120,7 @@ export class AuthService {
     });
     console.log(user);
     if (!user) throw new ForbiddenException('access denied');
+    res.clearCookie('refresh_token')
     return true;
   }
 
@@ -131,5 +144,15 @@ export class AuthService {
       access_token: accessToken,
       refresh_token: refreshToken,
     };
+  }
+  async remove(id:number) {
+    return this.prismaService.user.delete({
+      where:{
+        id:+id
+      }
+    })
+  }
+  async getAll(){
+    return this.prismaService.user.findMany()
   }
 }

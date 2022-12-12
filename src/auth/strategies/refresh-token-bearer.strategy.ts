@@ -5,7 +5,7 @@ import {ExtractJwt,Strategy} from "passport-jwt";
 import {JwtPayload, JwtPayloadWithRefreshToken} from "../types";
 
 @Injectable()
-export class RefreshTokenStrategy extends PassportStrategy 
+export class RefreshTokenBearerStrategy extends PassportStrategy 
 (Strategy,'refresh-jwt')
 {
     constructor() {

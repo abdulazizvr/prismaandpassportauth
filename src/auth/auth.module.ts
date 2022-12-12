@@ -4,7 +4,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import {APP_GUARD} from "@nestjs/core";
-import {AccessTokenStrategy, RefreshTokenStrategy, RefreshTokenFromCookieStrategy} from "./strategies";
+import {AccessTokenStrategy, RefreshTokenBearerStrategy, RefreshTokenFromCookieStrategy} from "./strategies";
 import {AccessTokenGuard} from "../common/guards";
 
 @Module({
@@ -13,8 +13,8 @@ import {AccessTokenGuard} from "../common/guards";
   providers: [
       AuthService,
       AccessTokenStrategy,
+      // RefreshTokenBearerStrategy,
       RefreshTokenFromCookieStrategy,
-      RefreshTokenStrategy,
     {
       provide:APP_GUARD,
       useClass:AccessTokenGuard

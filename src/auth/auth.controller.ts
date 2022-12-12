@@ -1,10 +1,10 @@
-import {Controller, Post, Get, Put, HttpCode, HttpStatus, Body, Param, Res, UseGuards} from '@nestjs/common';
+import {Controller, Post, Get, Put, HttpCode, HttpStatus, Body, Param, Res, UseGuards, Delete} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthDto } from './dto/';
 import { Tokens } from './types';
 import {GetCurrentUser, GetCurrentUserId, Public} from "../common/decorators";
 import {RefreshTokenGuard} from "../common/guards";
-
+import { Response } from 'express';
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService:AuthService) { }
@@ -12,26 +12,31 @@ export class AuthController {
     @Public()
     @Post('signup')
     @HttpCode(HttpStatus.CREATED)
-    signup(@Body() authDto:AuthDto):Promise<Tokens> {
-        return this.authService.signup(authDto)
+    signup(
+        @Body() authDto:AuthDto,
+        @Res({passthrough:true}) res:Response,
+        ):Promise<Tokens> {
+        return this.authService.signup(authDto,res)
     }
 
     @Public()
     @Post('signin')
     @HttpCode(HttpStatus.OK)
-    async signin(@Body() authDto:AuthDto) : Promise<Tokens> {
-        return await this.authService.signin(authDto)
+    async signin(
+        @Body() authDto:AuthDto,
+        @Res({passthrough:true}) res:Response,
+        ) : Promise<Tokens> {
+        return await this.authService.signin(authDto,res)
     }
 
-
+    
     @Post('logout')
     @HttpCode(HttpStatus.OK)
     logout(
         @GetCurrentUserId() userId:number,
-        @Res({passthrough:true}) res,
+        @Res({passthrough:true}) res:Response,
     ) : Promise<Boolean> {
-        res.clearCookie('refresh_token')
-        return this.authService.logout(userId)
+        return this.authService.logout(userId,res)
     }
 
     @Public()
@@ -41,9 +46,21 @@ export class AuthController {
     async refreshTokens (
         @GetCurrentUserId() userId:number,
         @GetCurrentUser('refreshToken') refreshToken:string,
+        @Res({passthrough:true}) res:Response,
     ):Promise<Tokens> {
         console.log(refreshToken)
-        return this.authService.refreshTokens(userId, refreshToken)
+        return this.authService.refreshTokens(userId, refreshToken,res)
     }
 
+    @Public()
+    @Delete('/:id')
+    async delete(@Param('id') id:number) {
+        return this.authService.remove(id)
+    }
+
+    @Public()
+    @Get()
+    async getAll(){
+        return this.authService.getAll()
+    }
 }
